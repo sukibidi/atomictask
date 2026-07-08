@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export default function GanttChartSlider({ 
-  milestones = [], 
+  projects = [], // FIXED: Named projects to prevent loop undefined errors
   tasks = [],      
   semesterStartDate = "2026-03-30", 
   isDarkMode 
@@ -65,24 +65,26 @@ export default function GanttChartSlider({
     <div className={`w-full overflow-hidden border rounded-2xl shadow-xs flex flex-col justify-between transition-colors ${
       isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-100'
     }`}>
-      <div className={`px-5 py-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+      <div className={`px-4 py-3 sm:px-5 sm:py-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
         isDarkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-gray-50/40 border-gray-100'
       }`}>
         <div className="text-left">
-          <h3 className="text-sm font-bold tracking-tight">Executive Project Roadmap</h3>
-          <p className="text-[10px] text-textMuted mt-0.5">Live operational timeline sync spanning your project boundary constraints.</p>
+          <h3 className="text-sm font-bold tracking-tight">Milestones & Deadlines</h3>
+          <p className="text-[10px] text-textMuted mt-0.5">An automatically updating timeline that makes sure you never miss a project start or end date.</p>
         </div>
-        <div className={`flex gap-1 p-1 rounded-xl border ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/40'}`}>
+        <div className={`flex w-full sm:w-auto gap-1 p-1 rounded-xl border justify-center ${
+          isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200/40'
+        }`}>
           {['days', 'weeks', 'months'].map((mode) => (
-            <button key={mode} type="button" onClick={() => setViewMode(mode)} className={`px-2.5 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider cursor-pointer transition-all ${viewMode === mode ? (isDarkMode ? 'bg-slate-700 text-emerald-400' : 'bg-white text-slate-900 shadow-3xs') : 'text-textMuted'}`}>{mode}</button>
+            <button key={mode} type="button" onClick={() => setViewMode(mode)} className={`flex-1 sm:flex-initial px-3 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider cursor-pointer transition-all ${viewMode === mode ? (isDarkMode ? 'bg-slate-700 text-emerald-400' : 'bg-white text-slate-900 shadow-3xs') : 'text-textMuted'}`}>{mode}</button>
           ))}
         </div>
       </div>
 
-      <div className="overflow-x-auto p-5">
-        <div className="min-w-[950px] space-y-4">
+      <div className="overflow-x-auto p-4 sm:p-5 -webkit-overflow-scrolling-touch">
+        <div className="min-w-[850px] sm:min-w-[950px] space-y-4">
           <div className={`grid grid-cols-12 font-bold text-[10px] border-b pb-2 ${isDarkMode ? 'border-slate-800 text-slate-400' : 'border-gray-100 text-slate-500'}`}>
-            <div className="col-span-4 uppercase tracking-wider text-left">Active Database Vaults</div>
+            <div className="col-span-4 uppercase tracking-wider text-left">Active Projects</div>
             <div className="col-span-8" style={gridStyle}>
               {viewMode === 'days' && Array.from({ length: 31 }, (_, i) => <div key={i+1} className="text-center font-mono text-[9px] font-bold">{i+1}</div>)}
               {viewMode === 'weeks' && Array.from({ length: 16 }, (_, i) => <div key={i+1} className="text-center font-mono text-[9px]">W{i+1}</div>)}
@@ -91,20 +93,20 @@ export default function GanttChartSlider({
           </div>
 
           <div className="divide-y divide-gray-100/10">
-            {milestones.length === 0 ? (
-              <div className="text-center py-8 text-xs font-mono text-gray-400">// No active workspace nodes deployed inside user account directories.</div>
+            {projects.length === 0 ? (
+              <div className="text-center py-8 text-xs font-mono text-gray-400">// Your workspace is clear—ready to start a new project?</div>
             ) : (
-              milestones.map((project) => {
+              projects.map((project) => {
                 const projectMilestones = tasks.filter(t => t.project_id === project.id && t.is_milestone === true);
                 const hasTimeline = project.start_date && project.end_date;
 
                 return (
-                  <div key={project.id} className="grid grid-cols-12 items-center py-3.5 border-b border-gray-100/5 hover:bg-gray-500/5">
-                    <div className="col-span-4 flex items-center gap-2 text-xs font-semibold text-left pr-4">
+                  <div key={project.id} className="grid grid-cols-12 items-center py-3 border-b border-gray-100/5 hover:bg-gray-500/5">
+                    <div className="col-span-4 flex items-center gap-2 text-xs font-semibold text-left pr-2">
                       <span className="text-xs">📁</span>
                       <div className="flex flex-col truncate">
                         <span className="truncate text-slate-900 dark:text-slate-100 font-bold">{project.title}</span>
-                        <span className="text-[9px] text-slate-400 font-mono tracking-tight uppercase truncate">{projectMilestones.length} SMART Markers Linked</span>
+                        <span className="text-[9px] text-slate-400 font-mono tracking-tight uppercase truncate">{projectMilestones.length} SMART Markers</span>
                       </div>
                     </div>
 
@@ -113,17 +115,17 @@ export default function GanttChartSlider({
                         <div key={i} className={`border-l h-full w-full pointer-events-none ${isDarkMode ? 'border-slate-800/20' : 'border-gray-100'}`} />
                       ))}
                       {hasTimeline ? (
-                        <div style={getProjectBarPlacement(project.start_date, project.end_date)} className="h-2.5 rounded-full bg-blue-500/20 text-blue-600 dark:bg-emerald-400/10 dark:text-emerald-400 border border-blue-500/10 dark:border-emerald-400/20 font-mono text-[8px] font-bold px-2 flex items-center justify-between transition-all overflow-hidden truncate pointer-events-none">
-                          <span>START</span><span>DURATION TRACK</span><span>END</span>
+                        <div style={getProjectBarPlacement(project.start_date, project.end_date)} className="h-2.5 rounded-full bg-blue-500/20 text-blue-600 dark:bg-emerald-400/10 dark:text-emerald-400 border border-blue-500/10 dark:border-emerald-400/20 font-mono text-[7px] sm:text-[8px] font-bold px-1 sm:px-2 flex items-center justify-between transition-all overflow-hidden truncate pointer-events-none">
+                          <span className="hidden sm:inline">START</span><span>TRACK</span><span className="hidden sm:inline">END</span>
                         </div>
                       ) : (
-                        <div className="absolute inset-x-0 text-center text-[9px] font-mono text-gray-400 italic pointer-events-none">// Awaiting milestone configurations or timeline bounds...</div>
+                        <div className="absolute inset-x-0 text-center text-[9px] font-mono text-gray-400 italic pointer-events-none">// Awaiting bounds...</div>
                       )}
 
                       {projectMilestones.map((milestone) => {
                         const isCompleted = milestone.status === 'completed';
                         return (
-                          <div key={milestone.id} style={getGridPlacement(milestone.due_date || project.end_date)} title={`${milestone.title} (Target: ${milestone.due_date || "Open"})`} className={`absolute text-sm leading-none transition-all select-none z-10 font-bold cursor-help ${isCompleted ? 'text-emerald-500 transform scale-125' : 'text-blue-500 dark:text-white'}`}>♦</div>
+                          <div key={milestone.id} style={getGridPlacement(milestone.due_date || project.end_date)} title={milestone.title} className={`absolute text-xs sm:text-sm leading-none transition-all select-none z-10 font-bold cursor-help ${isCompleted ? 'text-emerald-500 transform scale-125' : 'text-blue-500 dark:text-white'}`}>♦</div>
                         );
                       })}
                     </div>

@@ -26,11 +26,29 @@ export default function TaskKanbanBoard({
   };
 
   const lanes = [
-    { id: 'to_do', title: '📋 To Do', bg: isDarkMode ? 'bg-slate-900/40' : 'bg-gray-50/50' },
-    { id: 'in_progress', title: '⚡ In Progress', bg: isDarkMode ? 'bg-slate-900/40' : 'bg-gray-50/50' },
-    { id: 'completed', title: '🎯 Completed', bg: isDarkMode ? 'bg-slate-900/40' : 'bg-gray-50/50' }
+    { 
+      id: 'to_do', 
+      title: 'To Do', 
+      icon: 'https://cdn-icons-png.flaticon.com/128/9741/9741134.png',
+      bg: isDarkMode ? 'bg-slate-900/40' : 'bg-gray-50/50',
+      isInvertible: true // Flags that this black icon needs to turn white in dark mode
+    },
+    { 
+      id: 'in_progress', 
+      title: 'In Progress', 
+      icon: '⚡', // Kept emoji since no specific icon was specified for this lane
+      bg: isDarkMode ? 'bg-slate-900/40' : 'bg-gray-50/50',
+      isInvertible: false
+    },
+    { 
+      id: 'completed', 
+      title: 'Completed', 
+      icon: 'https://cdn-icons-png.flaticon.com/128/17981/17981277.png',
+      bg: isDarkMode ? 'bg-slate-900/40' : 'bg-gray-50/50',
+      isInvertible: false // Already a bright badge color, no inversion needed
+    }
   ];
-
+    
   return (
     <div className="space-y-6">
       
@@ -66,11 +84,36 @@ export default function TaskKanbanBoard({
                 isDarkMode ? 'border-slate-800/80' : 'border-gray-100'
               }`}
             >
+              {/* ============================================================================
+                  FIXED COLUMN HEADER PANE WITH FLATICON IMAGE COMPATIBILITY
+                  ============================================================================ */}
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100/10 px-1">
-                <span className={`text-xs font-bold tracking-wide uppercase ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{lane.title}</span>
-                <span className="text-[10px] font-mono font-bold bg-gray-500/10 px-2 py-0.5 rounded-full opacity-70">{laneTasks.length}</span>
+                <div className="flex items-center gap-2">
+                  
+                  {/* DYNAMIC CHECK: If the icon string is a web link, render an <img> tag. Else, render the inline text emoji */}
+                  {lane.icon.startsWith('http') ? (
+                    <img 
+                      src={lane.icon} 
+                      alt={`${lane.title} Icon`} 
+                      className={`w-4 h-4 object-contain select-none ${
+                        lane.isInvertible && isDarkMode ? 'invert opacity-90' : ''
+                      }`} 
+                    />
+                  ) : (
+                    <span className="text-sm select-none">{lane.icon}</span>
+                  )}
+
+                  <span className={`text-xs font-bold tracking-wide uppercase ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                    {lane.title}
+                  </span>
+                </div>
+                
+                <span className="text-[10px] font-mono font-bold bg-gray-500/10 px-2 py-0.5 rounded-full opacity-70">
+                  {laneTasks.length}
+                </span>
               </div>
 
+              {/* TASK DROPDOWN MATRIX ITEMS */}
               <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[500px] pr-1">
                 {laneTasks.length === 0 ? (
                   <div className="text-center text-[11px] text-gray-400 py-10 border border-dashed border-gray-300/10 rounded-xl">// Lane entry clear</div>
@@ -106,7 +149,6 @@ export default function TaskKanbanBoard({
                           <div className="flex justify-between items-center">
                             <span className="text-textMuted font-medium">Assignee:</span>
                             {isOwner ? (
-                              /* OWNER ACCESS: Interactive management dropdown switch selector */
                               <select 
                                 value={task.assignee_id || ""}
                                 onChange={(e) => onAssignUser(task.id, e.target.value || null)}
@@ -120,8 +162,7 @@ export default function TaskKanbanBoard({
                                 ))}
                               </select>
                             ) : (
-                              /* COLLABORATOR ACCESS: Flat descriptive, un-clickable profile metric label text */
-                              <span className="font-bold text-slate-300">
+                              <span className="font-bold text-slate-400">
                                 {assignedUser ? assignedUser.display_name : "Unassigned"}
                               </span>
                             )}

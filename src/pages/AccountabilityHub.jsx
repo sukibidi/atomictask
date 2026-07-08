@@ -10,12 +10,16 @@ export default function AccountabilityHub({ isDarkMode }) {
   const [actionLoading, setActionLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
 
+  // States to monitor accordion visibility and project lists for each companion card
+  const [expandedFriendId, setExpandedFriendId] = useState(null);
+  const [friendProjects, setFriendProjects] = useState([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+
   async function fetchConnections(userId) {
     if (!userId) return;
     try {
       setLoading(true);
       
-      // Fetch connections where friendship state is fully accepted
       const { data: acceptedData, error: err1 } = await supabase
         .from('friendships')
         .select(`
@@ -31,7 +35,6 @@ export default function AccountabilityHub({ isDarkMode }) {
 
       if (err1) throw err1;
 
-      // Fetch incoming requests waiting for authorization
       const { data: pendingData, error: err2 } = await supabase
         .from('friendships')
         .select(`
@@ -73,7 +76,6 @@ export default function AccountabilityHub({ isDarkMode }) {
     setStatusText("");
 
     try {
-      // 1. Search public data profiles for matching unique email addresses
       const { data: targetUser, error: findErr } = await supabase
         .from('users')
         .select('id')
@@ -81,10 +83,9 @@ export default function AccountabilityHub({ isDarkMode }) {
         .maybeSingle();
 
       if (findErr) throw findErr;
-      if (!targetUser) throw new Error("Account token with that email address does not exist inside directory.");
-      if (targetUser.id === currentUserId) throw new Error("Self-referencing loops not permitted in partner channels.");
+      if (!targetUser) throw new Error("No atomic profile found with that email address.");
+      if (targetUser.id === currentUserId) throw new Error("You can't add yourself to your own Atomic Squad.");
 
-      // 2. Insert connection row into friendships table
       const { error: insertErr } = await supabase
         .from('friendships')
         .insert([{ user_id: currentUserId, friend_id: targetUser.id, status: 'pending' }]);
@@ -124,125 +125,186 @@ export default function AccountabilityHub({ isDarkMode }) {
         .eq('id', requestId);
 
       if (error) throw error;
+      setExpandedFriendId(null);
+      setFriendProjects([]);
       await fetchConnections(currentUserId);
     } catch (err) {
       console.error("SEVER CONNECTION DELETION EXCEPTION:", err.message);
     }
   };
 
-  if (loading) return <div className="text-xs font-mono text-slate-500 text-left animate-pulse">// Aligning secure social link matrices...</div>;
+  const toggleObserveGrid = async (friendId) => {
+    if (expandedFriendId === friendId) {
+      setExpandedFriendId(null);
+      setFriendProjects([]);
+      return;
+    }
+
+    try {
+      setProjectsLoading(true);
+      setExpandedFriendId(friendId);
+      setFriendProjects([]);
+
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, title, description, start_date, end_date')
+        .eq('user_id', friendId);
+
+      if (error) throw error;
+      setFriendProjects(data || []);
+    } catch (err) {
+      console.error("OBSERVER GRID FETCH EXCEPTION:", err.message);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+
+  if (loading) return <div className="text-sm text-slate-500 animate-pulse">Loading squad...</div>;
 
   return (
-    <div className="space-y-8 w-full max-w-full text-left overflow-hidden">
-      
-      <div>
-        <h1 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-          Accountability Network Hub
+    <div className="space-y-8 w-full max-w-6xl px-0 text-left">
+      <div className="max-w-2xl">
+        <h1 className={`text-3xl font-semibold ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>
+          Atomic Squad
         </h1>
-        <p className="text-xs text-textMuted mt-1">
-          Synchronize focus metrics with trusted companions via verified identity email channels.
+        <p className="text-sm text-slate-500 mt-2">
+          Minimal squad access and connection control.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        
-        {/* LEFT COLUMN: CONNECTION FORM & INCOMING REQUESTS */}
-        <div className="lg:col-span-1 space-y-6">
-          
-          {/* Dispatch request card */}
-          <div className={`border rounded-2xl p-5 shadow-xs ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-2">Initialize Companion Link</h3>
-            <form onSubmit={handleSendRequest} className="space-y-3 text-xs">
-              <input 
-                required
-                type="email" 
-                placeholder="companion@workspace.com" 
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                className={`w-full border rounded-xl px-3 py-2.5 outline-none font-medium transition-all ${
-                  isDarkMode ? 'bg-slate-950 border-slate-800 text-white focus:border-slate-600 placeholder-slate-700' : 'bg-gray-50 border-gray-200 focus:border-slate-400 text-slate-900'
-                }`}
-              />
-              <button 
-                type="submit" 
-                disabled={actionLoading}
-                className={`w-full py-2.5 font-bold rounded-xl text-[11px] uppercase tracking-wide cursor-pointer transition-colors ${
-                  isDarkMode ? 'bg-white text-slate-950 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800'
-                }`}
-              >
-                {actionLoading ? "Syncing..." : "Connect via Email"}
-              </button>
-            </form>
-            {statusText && <div className="text-[10px] font-mono mt-3 text-slate-400 break-words">// {statusText}</div>}
-          </div>
-
-          {/* Incoming requests checklist panel */}
-          <div className={`border rounded-2xl p-5 shadow-xs ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-3">Pending Authorizations</h3>
+      <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
+        <section className={`rounded-3xl border p-5 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="space-y-6">
             <div className="space-y-2">
-              {pendingRequests.length === 0 ? (
-                <div className="text-[11px] font-mono text-gray-500 py-2">// No external entry requests pending.</div>
-              ) : (
-                pendingRequests.map(req => (
-                  <div key={req.id} className="flex justify-between items-center p-3 border border-gray-100/10 rounded-xl bg-slate-950/20 text-xs">
-                    <div className="truncate pr-2 text-left">
-                      <span className="font-bold block truncate">{req.sender?.display_name || "Focus User"}</span>
-                      <span className="text-[9px] text-textMuted font-mono truncate block">{req.sender?.email}</span>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Invite</p>
+              <form onSubmit={handleSendRequest} className="flex flex-col gap-3">
+                <input
+                  required
+                  type="email"
+                  placeholder="Email address"
+                  value={searchEmail}
+                  onChange={(e) => setSearchEmail(e.target.value)}
+                  className={`rounded-2xl border px-4 py-3 text-sm outline-none transition ${
+                    isDarkMode ? 'bg-slate-900 border-slate-800 text-white placeholder:text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400'
+                  }`}
+                />
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    isDarkMode ? 'bg-white text-slate-950 hover:bg-slate-100' : 'bg-slate-950 text-white hover:bg-slate-800'
+                  }`}
+                >
+                  {actionLoading ? 'Sending...' : 'Send invite'}
+                </button>
+              </form>
+            </div>
+
+            {statusText && <p className="text-sm text-slate-500">{statusText}</p>}
+
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pending</p>
+              <div className="space-y-2">
+                {pendingRequests.length === 0 ? (
+                  <div className="text-sm text-slate-400">No pending requests.</div>
+                ) : (
+                  pendingRequests.map(req => (
+                    <div
+                      key={req.id}
+                      className={`rounded-3xl border p-4 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="font-medium">{req.sender?.display_name || 'Pending companion'}</p>
+                          <p className="text-sm text-slate-500">{req.sender?.email}</p>
+                        </div>
+                        <button
+                          onClick={() => handleAcceptRequest(req.id)}
+                          className={`rounded-2xl px-3 py-2 text-sm font-semibold transition ${
+                            isDarkMode ? 'bg-white text-slate-950 hover:bg-slate-100' : 'bg-slate-950 text-white hover:bg-slate-800'
+                          }`}
+                        >
+                          Accept
+                        </button>
+                      </div>
                     </div>
-                    <button 
-                      onClick={() => handleAcceptRequest(req.id)} 
-                      className={`shrink-0 px-3 py-1.5 font-bold rounded-lg text-[10px] uppercase transition-colors cursor-pointer ${
-                        isDarkMode ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20' : 'bg-slate-900 text-white hover:bg-slate-800'
-                      }`}
-                    >
-                      Accept
-                    </button>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
           </div>
-
-        </div>
+        </section>
 
         {/* RIGHT COLUMN: LINKED ACTIVE COMPANIONS DIRECTORY LISTING */}
-        <div className={`lg:col-span-2 border rounded-2xl p-5 shadow-xs ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-100'}`}>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-textMuted mb-3">Active Connected Observers</h3>
-          
-          <div className="space-y-2">
+        <section className={`rounded-3xl border p-5 ${isDarkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Active squad</p>
+              <p className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-slate-950'}`}>Companions</p>
+            </div>
+            <p className="text-sm text-slate-500">{friends.length} connected</p>
+          </div>
+
+          <div className="space-y-4">
             {friends.length === 0 ? (
-              <div className="text-center py-16 text-xs font-mono text-gray-500">// Your partner link grid is currently unlinked.</div>
+              <div className="text-sm text-slate-400">No members connected yet.</div>
             ) : (
               friends.map(link => {
                 const isOwnerSender = link.user_id === currentUserId;
                 const activeFriend = isOwnerSender ? link.receiver : link.sender;
-
+                const isExpanded = expandedFriendId === activeFriend?.id;
                 return (
-                  <div key={link.id} className={`p-4 border rounded-xl flex justify-between items-center text-xs transition-colors ${
-                    isDarkMode ? 'bg-slate-950/40 border-slate-800/80 hover:border-slate-700' : 'bg-gray-50 border-gray-100'
-                  }`}>
-                    <div className="space-y-0.5 text-left">
-                      <span className="font-bold text-sm block">{activeFriend?.display_name || "Focus Companion"}</span>
-                      <span className="text-[10px] font-mono tracking-tight text-textMuted block">{activeFriend?.email}</span>
+                  <div
+                    key={link.id}
+                    className={`rounded-3xl border p-4 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="font-medium">{activeFriend?.display_name || 'Focus Companion'}</p>
+                        <p className="text-sm text-slate-500">{activeFriend?.email}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleObserveGrid(activeFriend?.id)}
+                          className={`rounded-2xl px-4 py-2 text-sm font-semibold transition ${
+                            isExpanded ? 'bg-slate-950 text-white' : isDarkMode ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-slate-100 text-slate-900 hover:bg-slate-200'
+                          }`}
+                        >
+                          {isExpanded ? 'Close' : 'View'}
+                        </button>
+                        <button
+                          onClick={() => handleSeverConnection(link.id)}
+                          className="text-sm text-rose-500 underline-offset-2 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex gap-2 items-center">
-                      <button 
-                        onClick={() => alert(`Launching Remote Session. Loading workload logs for: ${activeFriend?.email}`)} 
-                        className={`px-3 py-1.5 font-bold rounded-lg text-[10px] uppercase border transition-colors cursor-pointer ${
-                          isDarkMode ? 'bg-slate-800 border-slate-700 text-white hover:border-slate-500' : 'bg-white border-gray-200 text-slate-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        Observe Grid
-                      </button>
-                      <button onClick={() => handleSeverConnection(link.id)} className="text-[10px] text-rose-500 font-bold px-2 font-mono hover:underline cursor-pointer">[ Sever ]</button>
-                    </div>
+                    {isExpanded && (
+                      <div className="mt-4 rounded-3xl border border-slate-200/70 bg-slate-50 p-4 text-sm text-slate-500">
+                        {projectsLoading ? (
+                          <div>Loading projects…</div>
+                        ) : friendProjects.length === 0 ? (
+                          <div>No shared projects.</div>
+                        ) : (
+                          <div className="space-y-3">
+                            {friendProjects.map(proj => (
+                              <div key={proj.id} className="rounded-3xl border border-slate-200 bg-white p-3">
+                                <p className="font-medium text-slate-950">{proj.title}</p>
+                                <p className="text-sm text-slate-500 truncate">{proj.description || 'No description'}</p>
+                                <p className="mt-2 text-xs text-slate-400">Deadline: {proj.end_date || 'Open'}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
             )}
           </div>
-        </div>
+        </section>
 
       </div>
 

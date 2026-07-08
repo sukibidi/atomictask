@@ -65,8 +65,8 @@ export default function ProfileUpdate({ isDarkMode }) {
     }`}>
       
       <div className="border-b border-gray-100/10 pb-3 mb-5">
-        <h3 className="text-xs font-bold uppercase tracking-wider">Identity Core Configuration</h3>
-        <p className="text-[11px] text-textMuted mt-0.5">Calibrate personal directory data parameters. Metadata changes log directly to tracking rows.</p>
+        <h3 className="text-xs font-bold uppercase tracking-wider">Edit Profile</h3>
+        <p className="text-[11px] text-textMuted mt-0.5">Update your core profile variables. All changes are written directly to the system registry.</p>
       </div>
 
       {statusMessage.text && (

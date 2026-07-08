@@ -133,15 +133,15 @@ export default function DashboardHeader({ isDarkMode }) {
               onClick={() => setIsCalibrating(!isCalibrating)}
               className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider uppercase font-mono mt-1 sm:mt-0 max-w-max cursor-pointer border transition-colors ${
                 isCalibrating 
-                  ? 'bg-slate-800 text-orange-400 border-slate-700' 
-                  : (isDarkMode ? 'bg-slate-800 text-slate-200 border-slate-700 hover:border-slate-500' : 'bg-slate-900 text-white hover:bg-slate-800')
+                  ? 'bg-slate-950 text-emerald-400 border-slate-800' 
+                  : (isDarkMode ? 'bg-slate-950 text-emerald-400 border-slate-800 hover:border-slate-500' : 'bg-slate-900 text-white hover:bg-slate-800')
               }`}
             >
               {getUniversalAcademicPhase()} [EDIT]
             </button>
           </div>
           <p className="text-xs text-textMuted font-medium">
-            Your personalized performance cockpit adjusts dynamically to your calendar inputs.
+            Your study hub connects to your calendar and adjusts on the fly, making sure your plans are always up to date
           </p>
         </div>
 

@@ -39,17 +39,17 @@ export default function Login({ onAuthSuccess, isDarkMode }) {
           </h1>
           
           <p className="text-xs text-textMuted leading-relaxed">
-            Welcome to your centralized cognitive command station. Engineered to eliminate friction and compound marginal gains, this framework provides a minimalist, data-driven ecosystem to track daily matrix ledgers, plan workflows, and audit personal consistency structures.
+            Welcome to your all-in-one planning dashboard. We’ve built this to cut out the stress and help you grow, one day at a time. It’s a simple way to manage your schedule, stay on top of your schoolwork, and see exactly how much progress you’re making.
           </p>
 
           <div className="grid grid-cols-2 gap-4 pt-4 text-left">
             <div className={`p-4 border rounded-xl ${isDarkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-gray-50 border-gray-100'}`}>
               <div className="text-xs font-bold tracking-wide uppercase">Identity Systems</div>
-              <p className="text-[10px] text-textMuted mt-1 leading-normal">Focusing on behavioral architecture instead of goals to build sustainable tracking habits loops.</p>
+              <p className="text-[10px] text-textMuted mt-1 leading-normal">Instead of just chasing a final result, we focus on how you set up your day. By building systems that fit your lifestyle, good habits become your new normal.</p>
             </div>
             <div className={`p-4 border rounded-xl ${isDarkMode ? 'bg-slate-950/40 border-slate-800' : 'bg-gray-50 border-gray-100'}`}>
               <div className="text-xs font-bold tracking-wide uppercase">Frictionless Audits</div>
-              <p className="text-[10px] text-textMuted mt-1 leading-normal">Integrated dashboard metrics map out task execution velocities in real time.</p>
+              <p className="text-[10px] text-textMuted mt-1 leading-normal">An effortless way to see your study speed as you work, helping you stay aware of your progress without any extra effort or stress.</p>
             </div>
           </div>
         </div>

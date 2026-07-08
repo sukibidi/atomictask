@@ -38,10 +38,10 @@ export default function AuthCard({ onAuthSuccess, isDarkMode }) {
       
       <div className="text-center space-y-1 mb-6">
         <h2 className="text-base font-bold tracking-wider uppercase">
-          {isRegisterMode ? "Create Profile Token" : "Terminal Authentication"}
+          {isRegisterMode ? "Create an Account" : "Log in to Your Account"}
         </h2>
         <p className="text-[10px] text-textMuted tracking-wide">
-          {isRegisterMode ? "Register to initialize your access key." : "Sign in to mount your habit matrices."}
+          {isRegisterMode ? "Register to create your account." : "Sign in to access your account."}
         </p>
       </div>
 
@@ -89,12 +89,12 @@ export default function AuthCard({ onAuthSuccess, isDarkMode }) {
               : (isDarkMode ? 'bg-white text-slate-950 hover:bg-slate-200' : 'bg-slate-900 text-white hover:bg-slate-800')
           }`}
         >
-          {loading ? "Verifying Token..." : (isRegisterMode ? "Register Profile" : "Initialize Session")}
+          {loading ? "Verifying Token..." : (isRegisterMode ? "Create Account" : "Log In")}
         </button>
       </form>
 
       <div className="mt-5 text-center border-t border-gray-100/10 pt-3 text-[11px] font-medium text-textMuted">
-        {isRegisterMode ? "Already verified inside the system?" : "First time forging routines?"}{" "}
+        {isRegisterMode ? "You're back?" : "First time here?"}{" "}
         <button 
           type="button" 
           onClick={() => setIsRegisterMode(!isRegisterMode)}

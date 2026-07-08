@@ -8,10 +8,10 @@ export default function Profile({ isDarkMode }) {
       {/* Page Title Header */}
       <div className="text-left">
         <h1 className={`text-2xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-          Account Settings
+          Profile Settings
         </h1>
         <p className="text-xs text-textMuted mt-1">
-          Manage your student core profile metadata and customize terminal preferences.
+          Configure your student credentials and fine-tune your cockpit terminal settings.
         </p>
       </div>
 

@@ -138,13 +138,13 @@ export default function MyTasks({ isDarkMode }) {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!userId || !window.confirm("Purge this task entry permanently from records?")) return;
+    if (!userId || !window.confirm("Delete this task entry permanently from records?")) return;
     try {
       const { error } = await supabase.from('tasks').delete().eq('id', taskId);
       if (error) throw error;
       await fetchTaskEnvironment(userId);
     } catch (err) {
-      console.error("CRITICAL PURGE EXCEPTION:", err.message);
+      console.error("CRITICAL DELETE EXCEPTION:", err.message);
     }
   };
 
@@ -165,7 +165,7 @@ export default function MyTasks({ isDarkMode }) {
           Daily Ledger Tasks
         </h1>
         <p className="text-xs text-textMuted mt-1">
-          Monitor completion velocities, log actions instantly, and organize workflows using the drag-and-drop board.
+          Keep pace with your goals, log tasks instantly, and drag-and-drop to organize your day.
         </p>
       </div>
 
