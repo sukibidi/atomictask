@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  /* This configures JetBrains Mono as the system default font */
+  --font-sans: "JetBrains Mono", ui-monospace, monospace;
+  
+  /* Maps your precise high-contrast layout colors */
+  --color-panelBg: #F7F5F2;
+  --color-cardBg: #FFFFFF;
+  --color-borderDark: #1A1814;
+  --color-accentBlue: #2B6CB0;
+  --color-accentTeal: #0D9488;
+  --color-accentCoral: #DC4E41;
+}
+
+body, #root {
+  background-color: var(--color-panelBg);
+  min-height: 100vh;
+  display: flex;
+  width: 100%;
+  margin: 0;
+  font-family: var(--font-sans);
+}
+
+/* ==========================================================================
+   THEME-AWARE SCROLLBAR MATRIX ENGINE
+   ========================================================================== */
+
+/* Universal Scrollbar Width Controls */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* Light Mode Defaults (Active when no parent dark wrapper exists) */
+::-webkit-scrollbar-track {
+  background: #f8fafc; /* appBg slate-50 */
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* slate-300 */
+  border-radius: 9999px;
+  border: 2px solid #f8fafc;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* slate-400 */
+}
+
+/* DARK MODE SCROLLBAR INJECTION OVERRIDES
+   Automatically overrides defaults when the parent layout class drops into .bg-slate-950
+*/
+.bg-slate-950 ::-webkit-scrollbar-track,
+.bg-slate-950::-webkit-scrollbar-track {
+  background: #0f172a; /* bg-slate-900 */
+}
+
+.bg-slate-950 ::-webkit-scrollbar-thumb,
+.bg-slate-950::-webkit-scrollbar-thumb {
+  background: #334155; /* bg-slate-700 */
+  border-radius: 9999px;
+  border: 2px solid #0f172a; /* Blends thumb edges to the track background seamless path */
+}
+
+.bg-slate-950 ::-webkit-scrollbar-thumb:hover,
+.bg-slate-950::-webkit-scrollbar-thumb:hover {
+  background: #10b981; /* Premium Emerald Accent on hover state actions */
+}
