@@ -148,6 +148,24 @@ export default function MyTasks({ isDarkMode }) {
     }
   };
 
+  const handleToggleComplete = async (taskId, isDone) => {
+    if (!userId) return;
+
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: isDone ? 'completed' : 'to_do' })
+        .eq('id', taskId)
+        .eq('user_id', userId)
+        .is('project_id', null);
+
+      if (error) throw error;
+      await fetchTaskEnvironment(userId);
+    } catch (err) {
+      console.error("PERSONAL TASK COMPLETION UPDATE ERROR:", err.message);
+    }
+  };
+
   if (loading) return <div className="text-xs font-mono text-slate-500 text-left animate-pulse">// Aligning workflow sub-components...</div>;
 
   // --- PRE-COMPUTE ANALYTICS METRICS VALUES PACKS ---
@@ -195,6 +213,7 @@ export default function MyTasks({ isDarkMode }) {
         projects={projects}
         onDragStart={handleDragStart}
         onDrop={handleDrop}
+        onToggleComplete={handleToggleComplete}
         openEditModal={openEditModal}
         handleDeleteTask={handleDeleteTask}
         isDarkMode={isDarkMode}

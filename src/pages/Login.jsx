@@ -55,7 +55,7 @@ export default function Login({ onAuthSuccess, isDarkMode }) {
         </div>
 
         <div className="text-[10px] text-textMuted font-mono opacity-60 relative z-10">
-          SYSTEM TERMINAL MODULE CORE // VER 2.6.0
+          IMS566 & IMS560 Project 2026 | Atomic task v0.04.1 | <span className="font-bold">© 2026</span> | All rights reserved
         </div>
       </div>
 
