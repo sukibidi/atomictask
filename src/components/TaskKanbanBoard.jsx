@@ -6,7 +6,7 @@ export default function TaskKanbanBoard({
   teamMembers = [], 
   currentUserId, 
   activeProjectId,
-  onAssignUser, 
+  onToggleComplete,
   onDragStart, 
   onDrop, 
   handleDeleteTask, 
@@ -119,7 +119,8 @@ export default function TaskKanbanBoard({
                   <div className="text-center text-[11px] text-gray-400 py-10 border border-dashed border-gray-300/10 rounded-xl">// Lane entry clear</div>
                 ) : (
                   laneTasks.map((task) => {
-                    const assignedUser = teamMembers.find(m => m.id === task.assignee_id);
+                    const isPersonalTask = !task.project_id;
+                    const isCompleted = task.status === 'completed';
                     
                     return (
                       <div 
@@ -144,27 +145,29 @@ export default function TaskKanbanBoard({
                           {task.title}
                         </div>
 
-                        {/* ASSIGNMENT COMPONENT ACTION HUB INTERFACE ROW */}
+                        {/* PERSONAL TASK COMPLETION CONTROL */}
                         <div className="mt-4 pt-2 border-t border-gray-100/10 flex flex-col gap-2 text-[10px]">
-                          <div className="flex justify-between items-center">
-                            <span className="text-textMuted font-medium">Assignee:</span>
-                            {isOwner ? (
-                              <select 
-                                value={task.assignee_id || ""}
-                                onChange={(e) => onAssignUser(task.id, e.target.value || null)}
-                                className={`border rounded-md px-1.5 py-0.5 outline-none text-[9px] font-semibold max-w-[120px] ${
-                                  isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-gray-200'
-                                }`}
-                              >
-                                <option value="">Unassigned</option>
-                                {teamMembers.map(member => (
-                                  <option key={member.id} value={member.id}>{member.display_name}</option>
-                                ))}
-                              </select>
+                          <div className="flex items-center justify-between">
+                            <span className="text-textMuted font-medium">
+                              {isPersonalTask ? 'Personal task' : 'Project task'}
+                            </span>
+                            {isPersonalTask ? (
+                              <label className="flex items-center gap-2 cursor-pointer rounded-full px-2 py-1 transition hover:bg-slate-700/40">
+                                <input
+                                  type="checkbox"
+                                  checked={isCompleted}
+                                  onChange={(e) => {
+                                    e.stopPropagation();
+                                    onToggleComplete(task.id, e.target.checked);
+                                  }}
+                                  className="h-3.5 w-3.5 rounded border border-slate-600 bg-transparent accent-emerald-500"
+                                />
+                                <span className={`text-[10px] font-medium ${isCompleted ? 'text-emerald-400' : 'text-slate-400'}`}>
+                                  {isCompleted ? 'Done' : 'Mark as done'}
+                                </span>
+                              </label>
                             ) : (
-                              <span className="font-bold text-slate-400">
-                                {assignedUser ? assignedUser.display_name : "Unassigned"}
-                              </span>
+                              <span className="text-[10px] text-slate-500">Locked</span>
                             )}
                           </div>
 
