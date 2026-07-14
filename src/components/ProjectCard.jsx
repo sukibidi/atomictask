@@ -3,13 +3,14 @@ import { supabase } from '../supabase';
 
 export default function ProjectCard({ 
   project, tasks, attachments, currentUserId, isDarkMode, teamMembers = [],
-  onTriggerInvite, onEdit, onAddTask, onToggleTask, onDeleteTask
+  onTriggerInvite, onEdit, onAddTask, onToggleTask, onDeleteTask, onDeleteProject, onRefresh
 }) {
   // View Windows and Upload States
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [activeViewUrl, setActiveViewUrl] = useState(null);
   const [viewingFileName, setViewingFileName] = useState("");
+  const [toast, setToast] = useState(null);
   
   // Form Values (Right Panel Inputs)
   const [inviteEmail, setInviteEmail] = useState("");
@@ -28,8 +29,13 @@ export default function ProjectCard({
     ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) 
     : 0;
 
+  const showToast = (message) => {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
+  };
+
   const handleUpdateProjectDetails = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!editTitle.trim()) return;
     try {
       const { error } = await supabase
@@ -37,7 +43,8 @@ export default function ProjectCard({
         .update({ title: editTitle.trim(), description: editDescription.trim() })
         .eq('id', project.id);
       if (error) throw error;
-      alert("Project details updated successfully!");
+      setIsWorkspaceOpen(false);
+      showToast("Project details updated");
     } catch (err) {
       alert(`Update failed: ${err.message}`);
     }
@@ -58,10 +65,17 @@ export default function ProjectCard({
     try {
       setIsUploading(true);
       const uniqueFileName = `${project.id}/${Date.now()}.${file.name.split('.').pop()}`;
-      await supabase.storage.from('project-assets').upload(uniqueFileName, file, { cacheControl: '3600', upsert: true });
-      await supabase.from('attachments').insert([{ project_id: project.id, file_name: file.name, storage_path: uniqueFileName, file_size: file.size, file_mime: file.type, user_id: currentUserId }]);
-    } catch (err) { 
-      console.error(err); 
+      const { error: uploadError } = await supabase.storage.from('project-assets').upload(uniqueFileName, file, { cacheControl: '3600', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: insertError } = await supabase.from('attachments').insert([{ project_id: project.id, file_name: file.name, storage_path: uniqueFileName, file_size: file.size, file_mime: file.type, user_id: currentUserId }]);
+      if (insertError) throw insertError;
+
+      // Don't wait on the realtime subscription — refresh state immediately
+      await onRefresh?.();
+    } catch (err) {
+      console.error(err);
+      alert(`Upload failed: ${err.message}`);
     } finally { 
       setIsUploading(false); 
     }
@@ -70,12 +84,49 @@ export default function ProjectCard({
   const handleViewFile = async (file) => {
     try {
       setViewingFileName(file.file_name);
-      const { data, error } = await supabase.storage.from('project-assets').createSignedUrl(file.storage_path, 60);
+      const { data, error } = await supabase.storage
+        .from('project-assets')
+        .createSignedUrl(file.storage_path, 300); // 5 min expiry
       if (error) throw error;
-      setActiveViewUrl(data.signedUrl);
+
+      const viewableMimes = ['image/png','image/jpeg','image/jpg','image/gif','image/webp','application/pdf'];
+      
+      if (viewableMimes.includes(file.file_mime)) {
+        // Open directly in new tab — bypasses iframe CSP block
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        // For Word docs, zips, etc — just trigger download instead
+        setActiveViewUrl(data.signedUrl);
+      }
     } catch (err) {
-      alert(`Access Blocked: ${err.message}`);
+      alert(`File access failed: ${err.message}`);
     }
+  };
+
+  const handleDeleteProject = async () => {
+    const confirmed = window.confirm(`Delete "${project.title}"? This will permanently remove all its tasks, files, and member invites. This cannot be undone.`);
+    if (!confirmed) return;
+    await onDeleteProject(project.id);
+    setIsWorkspaceOpen(false);
+  };
+
+  const handleDeleteFile = async (file) => {
+    const confirmed = window.confirm(`Delete "${file.file_name}"? This cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await supabase.storage.from('project-assets').remove([file.storage_path]);
+      const { error } = await supabase.from('attachments').delete().eq('id', file.id);
+      if (error) throw error;
+      await onRefresh?.();
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+    }
+  };
+
+  const getUploaderName = (uploaderId) => {
+    if (!uploaderId) return "Unknown";
+    if (uploaderId === currentUserId) return "You";
+    return teamMembers.find((m) => m.id === uploaderId)?.display_name || "Unknown";
   };
 
   const handleDownloadFile = async (file) => {
@@ -100,6 +151,15 @@ export default function ProjectCard({
     <div className={`border rounded-2xl p-5 relative flex flex-col justify-between text-left shadow-2xs transition-all group ${
       isDarkMode ? 'bg-slate-900 border-slate-800 text-white hover:border-slate-700' : 'bg-white border-gray-100 text-slate-900 hover:border-gray-200'
     }`}>
+
+      {/* MINIMALIST TOAST NOTIFICATION */}
+      {toast && (
+        <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 rounded-xl border text-xs font-semibold shadow-lg animate-fadeIn ${
+          isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-900 border-slate-800 text-white'
+        }`}>
+          {toast}
+        </div>
+      )}
       
       {/* CARD CONTENT HEADER */}
       <div className="space-y-2.5">
@@ -168,15 +228,26 @@ export default function ProjectCard({
                   {attachments.length === 0 ? (
                     <div className="text-[10px] text-slate-400 py-1">No uploaded project files available inside this workspace.</div>
                   ) : (
-                    attachments.map(file => (
-                      <div key={file.id} className={`text-[10px] font-mono flex items-center justify-between p-2 rounded-xl border ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-white border-gray-100 text-slate-700'}`}>
-                        <span className="truncate pr-4">📎 {file.file_name}</span>
-                        <div className="flex items-center gap-3 font-bold whitespace-nowrap">
-                          <button type="button" onClick={() => handleViewFile(file)} className="text-blue-500 hover:underline cursor-pointer uppercase">[ View ]</button>
-                          <button type="button" onClick={() => handleDownloadFile(file)} className="text-emerald-500 hover:underline cursor-pointer uppercase">[ Download ]</button>
+                    attachments.map(file => {
+                      const canDeleteFile = isOwner || file.user_id === currentUserId;
+                      return (
+                        <div key={file.id} className={`text-[10px] font-mono flex flex-col gap-1 p-2 rounded-xl border ${isDarkMode ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-white border-gray-100 text-slate-700'}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate pr-4">📎 {file.file_name}</span>
+                            <div className="flex items-center gap-3 font-bold whitespace-nowrap">
+                              <button type="button" onClick={() => handleViewFile(file)} className="text-blue-500 hover:underline cursor-pointer uppercase">[ View ]</button>
+                              <button type="button" onClick={() => handleDownloadFile(file)} className="text-emerald-500 hover:underline cursor-pointer uppercase">[ Download ]</button>
+                              {canDeleteFile && (
+                                <button type="button" onClick={() => handleDeleteFile(file)} className="text-rose-500 hover:underline cursor-pointer uppercase">[ Delete ]</button>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[9px] font-normal normal-case opacity-60">
+                            Uploaded by {getUploaderName(file.user_id)}{file.created_at ? ` · ${new Date(file.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : ''}
+                          </span>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -214,12 +285,11 @@ export default function ProjectCard({
 
                 {/* FORM 1: RE-NAME OR CHANGE DESCRIPTION METRICS */}
                 {isOwner && (
-                  <form onSubmit={handleUpdateProjectDetails} className="space-y-1.5">
+                  <div className="space-y-1.5">
                     <span className="text-[9px] font-bold text-slate-400 block uppercase">Edit Project Details</span>
                     <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className={`w-full text-xs p-2 rounded-lg border outline-none font-bold ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-gray-200 text-slate-900'}`} />
                     <textarea rows="2" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className={`w-full text-xs p-2 rounded-lg border outline-none resize-none ${isDarkMode ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-gray-200 text-slate-900'}`} />
-                    <button type="submit" className={`w-full py-1.5 rounded-lg text-[9px] font-bold uppercase border cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-100'}`}>Save Changes</button>
-                  </form>
+                  </div>
                 )}
 
                 {/* FORM 2: INVITATION PANEL HUB */}
@@ -265,6 +335,26 @@ export default function ProjectCard({
 
                   <button type="submit" className="w-full py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-xs font-bold uppercase rounded-lg hover:opacity-90 transition-all cursor-pointer">+ Add Member Task</button>
                 </form>
+
+                {/* PROJECT-LEVEL ACTIONS: SAVE CHANGES + DANGER ZONE */}
+                {isOwner && (
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-rose-500/20">
+                    <button
+                      type="button"
+                      onClick={handleUpdateProjectDetails}
+                      className={`w-full py-2 rounded-lg text-[9px] font-bold uppercase border cursor-pointer ${isDarkMode ? 'bg-slate-800 border-slate-700 hover:bg-slate-700' : 'bg-white border-gray-200 hover:bg-gray-100'}`}
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteProject}
+                      className="w-full py-2 rounded-lg text-[9px] font-bold uppercase border border-rose-500/40 text-rose-500 hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
+                    >
+                      🗑 Delete Project
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="text-center font-mono text-[8px] text-slate-400 mt-4 opacity-50">
@@ -276,16 +366,31 @@ export default function ProjectCard({
         </div>
       )}
 
-      {/* DETACHED DOCUMENT ATTACHMENT VIEWPORT PREVIEW LIGHTBOX */}
       {activeViewUrl && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
-          <div className={`w-full max-w-4xl h-[85vh] rounded-2xl flex flex-col overflow-hidden border shadow-2xl ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'}`}>
-            <div className="px-4 py-3 border-b flex justify-between items-center bg-slate-950/20 border-gray-100/10">
-              <span className="text-xs font-mono truncate font-bold">Document Preview: {viewingFileName}</span>
-              <button type="button" onClick={() => { setActiveViewUrl(null); setViewingFileName(""); }} className="text-xs font-mono font-black uppercase text-rose-500 hover:text-rose-400 cursor-pointer">[ Close Preview ]</button>
-            </div>
-            <div className="flex-1 w-full bg-white">
-              <iframe src={activeViewUrl} title="Popup Document Frame Viewport" className="w-full h-full border-0" />
+          <div className={`w-full max-w-sm rounded-2xl flex flex-col overflow-hidden border shadow-2xl p-6 space-y-4 text-center ${
+            isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-gray-200 text-slate-900'
+          }`}>
+            <span className="text-2xl">📄</span>
+            <p className="text-sm font-bold">{viewingFileName}</p>
+            <p className="text-xs text-slate-400">This file type cannot be previewed directly. Download it to open.</p>
+            <div className="flex gap-3 justify-center">
+              <a
+                href={activeViewUrl}
+                download={viewingFileName}
+                className="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 cursor-pointer"
+              >
+                Download File
+              </a>
+              <button
+                type="button"
+                onClick={() => { setActiveViewUrl(null); setViewingFileName(""); }}
+                className={`px-4 py-2 text-xs font-bold rounded-xl border cursor-pointer ${
+                  isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-100 border-gray-200'
+                }`}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@ export default function Sidebar({
   // 2. Dynamically inject the Admin button ONLY if isAdmin evaluates to true
   if (isAdmin) {
     navItems.push({ id: 'admin', label: 'Admin Terminal' });
+    navItems.push({ id: 'adminLogs', label: 'Database Logs' });
   }
 
   return (

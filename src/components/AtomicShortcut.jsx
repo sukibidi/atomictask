@@ -13,7 +13,7 @@ export default function AtomicShortcut({
       {/* HEADER CONTROL BAR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <span className="text-[10px] font-bold uppercase font-mono text-textMutedTracking tracking-wider">
-          // already finished? Input your new task here!
+          Quick Task Shortcut
         </span>
         
         {/* INTERACTIVE NAVIGATION BUTTON TRACK */}

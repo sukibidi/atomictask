@@ -1,10 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  /* This configures JetBrains Mono as the system default font */
-  --font-sans: "JetBrains Mono", ui-monospace, monospace;
+  /* Primary readable font: Poppins */
+  --font-sans: "Poppins", system-ui, -apple-system, sans-serif;
+
+  /* Override monospace utility so font-mono renders as Poppins too */
+  --font-mono: "Poppins", system-ui, -apple-system, sans-serif;
+
+  /* Bump up the default type scale for readability */
+  --text-xs: 0.8125rem;   /* was 0.75rem (12px) -> 13px */
+  --text-sm: 0.9375rem;   /* was 0.875rem (14px) -> 15px */
+  --text-base: 1.0625rem; /* was 1rem (16px) -> 17px */
+  --text-lg: 1.1875rem;   /* was 1.125rem (18px) -> 19px */
   
-  /* Maps your precise high-contrast layout colors */
+  /* Layout colors */
   --color-panelBg: #F7F5F2;
   --color-cardBg: #FFFFFF;
   --color-borderDark: #1A1814;
@@ -13,6 +22,18 @@
   --color-accentCoral: #DC4E41;
 }
 
+/* The app makes heavy use of Tailwind's arbitrary text-[Npx] utilities for
+   a "terminal" aesthetic — bump those up too so nothing renders illegibly small. */
+[class*="text-[6px]"]  { font-size: 9px !important; }
+[class*="text-[7px]"]  { font-size: 10px !important; }
+[class*="text-[8px]"]  { font-size: 11px !important; }
+[class*="text-[9px]"]  { font-size: 12px !important; }
+[class*="text-[10px]"] { font-size: 13px !important; }
+[class*="text-[11px]"] { font-size: 14px !important; }
+[class*="text-[12px]"] { font-size: 15px !important; }
+[class*="text-[13px]"] { font-size: 16px !important; }
+
+
 body, #root {
   background-color: var(--color-panelBg);
   min-height: 100vh;
@@ -20,47 +41,41 @@ body, #root {
   width: 100%;
   margin: 0;
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ==========================================================================
-   THEME-AWARE SCROLLBAR MATRIX ENGINE
-   ========================================================================== */
-
-/* Universal Scrollbar Width Controls */
+/* Universal Scrollbar Controls */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
-/* Light Mode Defaults (Active when no parent dark wrapper exists) */
 ::-webkit-scrollbar-track {
-  background: #f8fafc; /* appBg slate-50 */
+  background: #f8fafc;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1; /* slate-300 */
+  background: #cbd5e1;
   border-radius: 9999px;
   border: 2px solid #f8fafc;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8; /* slate-400 */
+  background: #94a3b8;
 }
 
-/* DARK MODE SCROLLBAR INJECTION OVERRIDES
-   Automatically overrides defaults when the parent layout class drops into .bg-slate-950
-*/
+/* Dark Mode Scrollbar Overrides */
 .bg-slate-950 ::-webkit-scrollbar-track,
 .bg-slate-950::-webkit-scrollbar-track {
-  background: #0f172a; /* bg-slate-900 */
+  background: #0f172a;
 }
 
 .bg-slate-950 ::-webkit-scrollbar-thumb,
 .bg-slate-950::-webkit-scrollbar-thumb {
-  background: #334155; /* bg-slate-700 */
+  background: #334155;
   border-radius: 9999px;
-  border: 2px solid #0f172a; /* Blends thumb edges to the track background seamless path */
+  border: 2px solid #0f172a;
 }
 
 .bg-slate-950 ::-webkit-scrollbar-thumb:hover,
 .bg-slate-950::-webkit-scrollbar-thumb:hover {
-  background: #10b981; /* Premium Emerald Accent on hover state actions */
+  background: #10b981;
 }

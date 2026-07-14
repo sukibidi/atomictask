@@ -11,7 +11,9 @@ export default function ProjectGrid({
   onEdit, 
   onAddTask, 
   onToggleTask, 
-  onDeleteTask 
+  onDeleteTask,
+  onDeleteProject,
+  refreshData
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
@@ -41,6 +43,8 @@ export default function ProjectGrid({
               onAddTask={onAddTask}
               onToggleTask={onToggleTask}
               onDeleteTask={onDeleteTask}
+              onDeleteProject={onDeleteProject}
+              onRefresh={refreshData}
             />
           );
         })

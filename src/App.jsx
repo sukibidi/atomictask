@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import Sidebar from './components/Sidebar';
 import AccountabilityHub from './pages/AccountabilityHub';
 import AdminDashboard from './pages/AdminDashboard'; // Ensure capitalization matches exactly
+import AdminLogs from './pages/AdminLogs';
 
 export default function App() {
   const [sessionUser, setSessionUser] = useState(null);
@@ -142,6 +143,19 @@ export default function App() {
               <AdminDashboard isDarkMode={isDarkMode} />
             ) : (
               /* If a sneaky student manually triggers currentTab = 'admin', this access denied page displays instantly */
+              <div className="p-12 text-center border border-dashed rounded-2xl border-rose-500/20 bg-rose-500/5 max-w-md mx-auto space-y-2 font-mono text-xs">
+                <span className="text-2xl block">🛑</span>
+                <h2 className="text-rose-500 font-bold uppercase tracking-wider">Access Restrained</h2>
+                <p className="text-textMuted leading-relaxed">Your account parameters do not contain administrative clearance keys. This security breach has been cataloged.</p>
+              </div>
+            )
+          )}
+
+          {/* HARD SECURITY BLOCK ROUTE FOR DATABASE AUDIT LOGS VIEW */}
+          {currentTab === 'adminLogs' && (
+            isAdmin ? (
+              <AdminLogs isDarkMode={isDarkMode} />
+            ) : (
               <div className="p-12 text-center border border-dashed rounded-2xl border-rose-500/20 bg-rose-500/5 max-w-md mx-auto space-y-2 font-mono text-xs">
                 <span className="text-2xl block">🛑</span>
                 <h2 className="text-rose-500 font-bold uppercase tracking-wider">Access Restrained</h2>

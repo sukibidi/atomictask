@@ -90,28 +90,36 @@ export default function Projects({ isDarkMode }) {
   const handleCreateProject = async (payload) => {
     try {
       const { invited_email, ...projectData } = payload;
-      
-      const { data: newProject, error } = await supabase
+
+      // Generate the ID client-side so we don't need to request the row back
+      // (INSERT ... RETURNING hits a Postgres RLS edge case on this project's schema)
+      const newProjectId = crypto.randomUUID();
+
+      const { error } = await supabase
         .from('projects')
-        .insert([{ ...projectData, user_id: currentUserId, owner_id: currentUserId }])
-        .select()
-        .single();
+        .insert([{ id: newProjectId, ...projectData, user_id: currentUserId, owner_id: currentUserId }]);
 
       if (error) throw error;
 
       // Handle direct, optional partner invite from creation drawer instantly
-      if (invited_email && newProject) {
-        await handleInviteMemberByEmail(newProject.id, invited_email);
+      if (invited_email) {
+        await handleInviteMemberByEmail(newProjectId, invited_email);
       }
+
+      // Don't wait on the realtime subscription — refresh state immediately
+      await fetchProjectEnvironment(currentUserId);
     } catch (err) {
       console.error("PROJECT INSERTER CHAIN FAULT:", err);
+      alert(`Create failed: ${err.message}`);
     }
   };
 
   const handleUpdateProject = async (id, title, description) => {
     try {
-      await supabase.from('projects').update({ title, description }).eq('id', id);
+      const { error } = await supabase.from('projects').update({ title, description }).eq('id', id);
+      if (error) throw error;
       setEditingProject(null);
+      await fetchProjectEnvironment(currentUserId);
     } catch (err) {
       console.error(err);
     }
@@ -133,6 +141,7 @@ export default function Projects({ isDarkMode }) {
         }
       ]);
       if (error) throw error;
+      await fetchProjectEnvironment(currentUserId);
     } catch (err) { 
       console.error("TASK DEPLOYMENT FAILURE:", err); 
     }
@@ -147,6 +156,7 @@ export default function Projects({ isDarkMode }) {
         .update({ status })
         .eq('id', taskId);
       if (error) throw error;
+      await fetchProjectEnvironment(currentUserId);
     } catch (err) { 
       console.error("STATUS SYNC FAILURE:", err); 
     }
@@ -159,8 +169,34 @@ export default function Projects({ isDarkMode }) {
         .delete()
         .eq('id', taskId);
       if (error) throw error;
+      await fetchProjectEnvironment(currentUserId);
     } catch (err) { 
       console.error("PURGE SYNC FAILURE:", err); 
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    try {
+      // Best-effort cleanup of stored files before wiping the DB rows
+      const projectFiles = attachments.filter((a) => a.project_id === projectId);
+      if (projectFiles.length > 0) {
+        const paths = projectFiles.map((f) => f.storage_path);
+        await supabase.storage.from('project-assets').remove(paths);
+      }
+
+      // Clear dependent rows first since there's no guaranteed cascade delete
+      await supabase.from('attachments').delete().eq('project_id', projectId);
+      await supabase.from('tasks').delete().eq('project_id', projectId);
+      await supabase.from('project_members').delete().eq('project_id', projectId);
+
+      const { error } = await supabase.from('projects').delete().eq('id', projectId);
+      if (error) throw error;
+
+      // Don't wait on the realtime subscription — refresh state immediately
+      await fetchProjectEnvironment(currentUserId);
+    } catch (err) {
+      console.error("PROJECT PURGE FAILURE:", err);
+      alert(`Delete failed: ${err.message}`);
     }
   };
 
@@ -196,6 +232,7 @@ export default function Projects({ isDarkMode }) {
 
       if (insertError) throw insertError;
       alert(`Success! Invitation request sent to ${emailInput.trim().toLowerCase()}.`);
+      await fetchProjectEnvironment(currentUserId);
     } catch (err) {
       console.error("INVITE ROUTE FAULT:", err);
     }
@@ -230,6 +267,7 @@ export default function Projects({ isDarkMode }) {
         onAddTask={handleAddTask} 
         onToggleTask={handleToggleTaskStatus} 
         onDeleteTask={handleDeleteTask}
+        onDeleteProject={handleDeleteProject}
         refreshData={() => fetchProjectEnvironment(currentUserId)}
       />
       
